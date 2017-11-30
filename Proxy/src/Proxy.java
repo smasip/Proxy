@@ -84,6 +84,7 @@ public class Proxy {
 		while(true) {
 			try {
 				datagramSocket.receive(p);
+				System.out.println(new String(p.getData()));
 				message = SIPMessage.parseMessage(new String(p.getData()));
 				if (message instanceof RegisterMessage) {
 					System.out.println(message.toStringMessage());
