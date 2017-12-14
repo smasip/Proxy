@@ -19,13 +19,15 @@ import layersProxy.UserLayerProxy;
 public class Proxy {
 	
 	private static DatagramSocket datagramSocket;
-	private static int puertoEscuchaProxy;
+	public static int puertoEscuchaProxy;
 	private static boolean debug;
-	private static boolean lr;
+	public static boolean lr;
 	private static UserLayerProxy ul;
 	private static TransactionLayerProxy transactionLayer;
 	private static TransportLayer transportLayer;
 	private static DatagramPacket p;
+	
+	
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub

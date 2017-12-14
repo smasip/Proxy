@@ -15,6 +15,7 @@ public class UserLayerProxy extends UserLayer{
 	
 	private Map<String, String> locationService;
 	private Map<String, String> allowedUsers;
+	private InviteMessage inboundInvite;
 	
 	public UserLayerProxy() {
 		super();
@@ -22,8 +23,13 @@ public class UserLayerProxy extends UserLayer{
 		this.allowedUsers = new HashMap<String, String>();
 		this.allowedUsers.put("sip:asdf1@dominio.es", "qwerty1");
 		this.allowedUsers.put("sip:asdf2@dominio.es", "qwerty2");
+		this.inboundInvite = null;
 	}
 	
+	public InviteMessage getInboundInvite() {
+		return inboundInvite;
+	}
+
 	public SIPMessage registerUser(RegisterMessage message) {
 		if(allowedUsers.containsKey(message.getToUri())) {
 			locationService.put(message.getToUri(), message.getContact().split("@")[1]);
@@ -49,6 +55,7 @@ public class UserLayerProxy extends UserLayer{
 				((TransactionLayerProxy)transactionLayer).setAddressClient(address);
 				((TransactionLayerProxy)transactionLayer).setPortClient(port);
 				((TransactionLayerProxy)transactionLayer).recvFromUser(message);
+				inboundInvite = (InviteMessage) message;
 			} catch (UnknownHostException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

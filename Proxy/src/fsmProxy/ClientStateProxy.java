@@ -1,6 +1,7 @@
 package fsmProxy;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import mensajesSIP.*;
 import layersProxy.*;
@@ -10,26 +11,34 @@ public enum ClientStateProxy {
 	CALLING {
 		@Override
 		public ClientStateProxy processMessage(SIPMessage message, TransactionLayer tl) {
-			System.out.println("CALLING");
-			System.out.println(message.toStringMessage());
+			
 			if(message instanceof InviteMessage) {
 				try {
+					System.out.println("COMPLETED -> TERMINATED");
+					ArrayList<String> newVias = message.getVias();
+					newVias.add(((TransactionLayerProxy)tl).getMyStringVias());
+					message.setVias(newVias);
 					((TransactionLayerProxy)tl).sendToTransportClient(message);
 					return this;
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
 			}else if (message instanceof RingingMessage) {
+				System.out.println("CALLING -> PROCEEDING");
 				tl.sendToUser(message);
 				return PROCEEDING;
 			}else if (message instanceof OKMessage) {
+				System.out.println("CALLING -> TERMINATED");
 				tl.sendToUser(message);
 				return TERMINATED;
 			}else if (message instanceof NotFoundMessage || 
 					  message instanceof ProxyAuthenticationMessage ||
 					  message instanceof RequestTimeoutMessage ||
 					  message instanceof BusyHereMessage ||
-					  message instanceof ServiceUnavailableMessage) {
+					  message instanceof ServiceUnavailableMessage) 
+			{
+				System.out.println("CALLING -> COMPLETED");
+				tl.sendACK(message);
 				return COMPLETED;
 			}
 			return this;
@@ -39,23 +48,28 @@ public enum ClientStateProxy {
 	PROCEEDING{
 		@Override
 		public ClientStateProxy processMessage(SIPMessage message, TransactionLayer tl) {
-			System.out.println("PROCEEDING");
-			System.out.println(message.toStringMessage());
+			
 			if (message instanceof TryingMessage || 
-			    message instanceof RingingMessage) {
+			    message instanceof RingingMessage) 
+			{
+				System.out.println("PROCEEDING -> PROCEEDING");
 				tl.sendToUser(message);
 				return this;
 			}else if (message instanceof OKMessage) {
+				System.out.println("PROCEEDING -> TERMINATED");
 				tl.sendToUser(message);
 				return TERMINATED;
 			}else if (message instanceof NotFoundMessage || 
 					  message instanceof ProxyAuthenticationMessage ||
 					  message instanceof RequestTimeoutMessage ||
 					  message instanceof BusyHereMessage ||
-					  message instanceof ServiceUnavailableMessage) {
-				// Falta send ACK y resp to TU
+					  message instanceof ServiceUnavailableMessage) 
+			{
+				System.out.println("PROCEEDING -> COMPLETED");
+				tl.sendACK(message);
 				return COMPLETED;
 			}
+			
 			return this;
 		}
 
@@ -63,15 +77,24 @@ public enum ClientStateProxy {
 	COMPLETED{
 		@Override
 		public ClientStateProxy processMessage(SIPMessage message, TransactionLayer tl) {
-			return TERMINATED;
+			if (message instanceof NotFoundMessage || 
+				message instanceof ProxyAuthenticationMessage ||
+				message instanceof RequestTimeoutMessage ||
+				message instanceof BusyHereMessage ||
+				message instanceof ServiceUnavailableMessage) 
+			{
+				System.out.println("COMPLETED -> TERMINATED");
+				tl.sendACK(message);
+			}
+			
+			return this;
+			
 		}
 		
 	},
 	TERMINATED{
 		@Override
 		public ClientStateProxy processMessage(SIPMessage message, TransactionLayer tl) {
-			System.out.println("TERMINATED");
-			System.out.println(message.toStringMessage());
 			return this;
 		}
 		

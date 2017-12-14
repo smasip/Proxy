@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 
 import layers.*;
+import mensajesSIP.OKMessage;
 import mensajesSIP.SIPException;
 import mensajesSIP.SIPMessage;
 
@@ -19,6 +20,9 @@ public class TransportLayerProxy extends TransportLayer{
     		try {
     			datagramSocket.receive(p);
     			message = SIPMessage.parseMessage(new String(p.getData()));
+    			System.out.println("Received Message:");
+    			if (message instanceof OKMessage) ((OKMessage)message).setSdp(null);
+    			System.out.println(message.toStringMessage());
     			transactionLayer.recvFromTransport(message);
 				p.setData(buf, 0, buf.length);
 			} catch (IOException e) {
