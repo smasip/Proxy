@@ -11,6 +11,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import mensajesSIP.*;
+import utils.Utils;
 import layers.*;
 import layersProxy.TransactionLayerProxy;
 import layersProxy.TransportLayerProxy;
@@ -25,7 +26,7 @@ public class Proxy {
 	private static UserLayerProxy ul;
 	private static TransactionLayerProxy transactionLayer;
 	private static TransportLayer transportLayer;
-	private static DatagramPacket p;
+	public static InetAddress myAddress;
 	
 	
 
@@ -47,6 +48,14 @@ public class Proxy {
 			e.printStackTrace();
 			System.out.println("Creation of DatagramSocket failed");
 			System.exit(0);
+		}
+		
+		try {
+			myAddress = Utils.getMyAddress();
+			System.out.println(myAddress.getHostAddress());
+		} catch (SocketException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		
 		ul = new UserLayerProxy();
