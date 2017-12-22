@@ -14,84 +14,76 @@ import proxy.Proxy;
 
 public class TransactionLayerProxy extends TransactionLayer{
 	
-	InetAddress addressClient;
-	InetAddress addressServer;
-	int portClient;
-	int portServer;
+	InetAddress requestAddress;
+	int requestPort;
 	ClientStateProxy client;
 	ServerStateProxy server;
 	Transaction currentTransaction;
-	private String myStringVias;
-	private Timer timer;
-	private TimerTask task;
-	
-	public InetAddress getAddressClient() {
-		return addressClient;
+	private Timer timerServer;
+	private TimerTask taskServer;
+	private Timer timerClient;
+	private TimerTask taskClient;
+	private String currentCallId;
+	private String destination;
+
+	public void setRequestAddress(InetAddress requestAddress) {
+		this.requestAddress = requestAddress;
 	}
 
-	public void setAddressClient(InetAddress addressClient) {
-		this.addressClient = addressClient;
+	public void setRequestPort(int requestPort) {
+		this.requestPort = requestPort;
 	}
 
-	public int getPortClient() {
-		return portClient;
-	}
-
-	public void setPortClient(int portClient) {
-		this.portClient = portClient;
-	}
 
 	public TransactionLayerProxy() {
 		super();
 		this.client = ClientStateProxy.TERMINATED;
 		this.server = ServerStateProxy.TERMINATED;
 		this.currentTransaction = Transaction.NO_TRANSACTION;
-		this.myStringVias = "localhost:" + Integer.toString(Proxy.puertoEscuchaProxy);
-		this.timer = new Timer();
+		this.timerServer = new Timer();
+		this.timerClient = new Timer();
+		this.taskServer = null;
+		this.taskClient = null;
+		this.currentCallId = null;
+		this.destination = null;
 	}
 	
-	public String getMyStringVias() {
-		return myStringVias;
-	}
 
 	public void sendACK(SIPMessage error) {
 		ACKMessage ack = new ACKMessage();
-		InviteMessage invite = ((UserLayerProxy)ul).getInboundInvite();
 		
 		ArrayList<String> vias = new ArrayList<String>();
-		vias.add(myStringVias);
-		String destination = invite.getDestination();
-    	String toUri = invite.getToUri();
-   	 	String fromUri = invite.getFromUri();
-   	 	String callId = invite.getCallId();
-   	 	String cSeqNumber = "1";
-   	 	String cSeqStr = "ACK";
+		vias.add(Proxy.getMyStringVias());
    	 	
    	 	ack.setDestination(destination);
-   	 	ack.setCallId(callId);
-	 	ack.setToUri(toUri);
-	 	ack.setFromUri(fromUri);
-	 	ack.setcSeqStr(cSeqStr);
-	 	ack.setcSeqNumber(cSeqNumber);
+   	 	ack.setCallId(currentCallId);
+	 	ack.setToUri(error.getToUri());
+	 	ack.setFromUri(error.getFromUri());
+	 	ack.setcSeqStr("ACK");
+	 	ack.setcSeqNumber("1");
 	 	ack.setVias(vias);
    	 	
-   	 	if(task == null) {
+   	 	if(taskClient == null) {
    	 		
-   	 		task = new TimerTask() {
+   	 		taskClient = new TimerTask() {
 			
 				@Override
 				public void run() {
 					client = ClientStateProxy.TERMINATED;
-					task = null;
-					ul.recvFromTransaction(error);
+					if(server == ServerStateProxy.TERMINATED && client == ClientStateProxy.TERMINATED){
+						currentTransaction = Transaction.NO_TRANSACTION;
+						currentCallId = null;
+						destination = null;
+					}
+					taskClient = null;
 				}
    	 		};
 		
-			timer.schedule(task, 1000);
+			timerClient.schedule(taskClient, 1000);
    	 	}
    	 	
    	 	try {
-			sendToTransportClient(ack);
+			sendToTransportRequest(ack);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -102,9 +94,9 @@ public class TransactionLayerProxy extends TransactionLayer{
 	
 	public void sendError(SIPMessage error) {
 			
-		if(task == null) {
+		if(taskServer == null) {
 			
-   	 		task = new TimerTask() {
+   	 		taskServer = new TimerTask() {
    	 			
    	 			int numTimes = 0;
 			
@@ -112,29 +104,34 @@ public class TransactionLayerProxy extends TransactionLayer{
 				public void run() {
 					if(numTimes <= 4) {
 						try {
-							transportLayer.sendToNetwork(addressServer, portServer, error);
+							sendToTransportResponse(error);
 							numTimes++;
 						} catch (IOException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
 					}else {
-						client = ClientStateProxy.TERMINATED;
-						task.cancel();
-						task = null;
+						server = ServerStateProxy.TERMINATED;
+						if(server == ServerStateProxy.TERMINATED && client == ClientStateProxy.TERMINATED){
+							currentTransaction = Transaction.NO_TRANSACTION;
+							currentCallId = null;
+							destination = null;
+						}
+						taskServer.cancel();
+						taskServer = null;
 					}
 				}
    	 		};
 		
-			timer.schedule(task, 200);
+			timerServer.schedule(taskServer, 200);
    	 	}
 			
 	}
 	
 	public void cancelTimer() {
-		if(task != null) {
-			task.cancel();
-			task = null;
+		if(taskServer != null) {
+			taskServer.cancel();
+			taskServer = null;
 		}
 	}
 	
@@ -166,26 +163,47 @@ public class TransactionLayerProxy extends TransactionLayer{
 		switch (currentTransaction) {
 		
 			case INVITE_TRANSACTION:
-				client = client.processMessage(message, this);
+				
+				if(!message.getCallId().equals(currentCallId)) {
+					s = message.getVias().get(0).split(":");
+					try {
+						ServiceUnavailableMessage serviceUnavailable = (ServiceUnavailableMessage) SIPMessage.createResponse(
+								SIPMessage._503_SERVICE_UNABAILABLE, message);
+						transportLayer.sendToNetwork(InetAddress.getByName(s[0]), Integer.valueOf(s[1]), serviceUnavailable);
+					} catch (UnknownHostException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}else {
+					client = client.processMessage(message, this);
+				}
+				
 				break;
 				
 			case NO_TRANSACTION:
 				
 				if(message instanceof InviteMessage) {
-					s = message.getVias().get(0).split(":");
-					try {
-						addressServer = InetAddress.getByName(s[0]);
-						portServer = Integer.valueOf(s[1]);
-						currentTransaction = Transaction.INVITE_TRANSACTION;
-						//currentCallID =
-						server = ServerStateProxy.PROCEEDING;
-						server = server.processMessage(message, this);
-					} catch (UnknownHostException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+					currentTransaction = Transaction.INVITE_TRANSACTION;
+					currentCallId = message.getCallId();
+					destination = ((InviteMessage)message).getDestination();
+					server = ServerStateProxy.PROCEEDING;
+					server = server.processMessage(message, this);
+				}else if(message instanceof ACKMessage) {
+					ul.recvFromTransaction(message);
+				}else if(message instanceof ByeMessage) {
+					currentTransaction = Transaction.BYE_TRANSACTION;
+					ul.recvFromTransaction(message);
 				}
 				
+				break;
+				
+			case BYE_TRANSACTION:
+				if(message instanceof OKMessage) {
+					ul.recvFromTransaction(message);
+				}
 				break;
 				
 			default:
@@ -208,7 +226,26 @@ public class TransactionLayerProxy extends TransactionLayer{
 					server = server.processMessage(message, this);
 					if(server == ServerStateProxy.TERMINATED && client == ClientStateProxy.TERMINATED){
 						currentTransaction = Transaction.NO_TRANSACTION;
+						currentCallId = null;
+						destination = null;
 					}
+				}
+				
+				break;
+				
+			case BYE_TRANSACTION:
+				
+				String[] s = message.getVias().get(0).split(":");
+
+				try {
+					currentTransaction = Transaction.NO_TRANSACTION;
+					transportLayer.sendToNetwork(InetAddress.getByName(s[0]), Integer.valueOf(s[1]), message);
+				} catch (UnknownHostException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
 				
 				break;
@@ -220,12 +257,18 @@ public class TransactionLayerProxy extends TransactionLayer{
 		
 	
 	
-	public void sendToTransportClient(SIPMessage message) throws IOException {
-		transportLayer.sendToNetwork(addressClient, portClient, message);
+	public void sendToTransportRequest(SIPMessage message) throws IOException {
+		transportLayer.sendToNetwork(requestAddress, requestPort, message);
 	}
 	
-	public void sendToTransportServer(SIPMessage message) throws IOException {
-		transportLayer.sendToNetwork(addressServer, portServer, message);
+	public void sendToTransportResponse(SIPMessage message) throws IOException {
+		String s[] = message.getVias().get(0).split(":");
+		try {
+			transportLayer.sendToNetwork(InetAddress.getByName(s[0]), Integer.valueOf(s[1]), message);
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }

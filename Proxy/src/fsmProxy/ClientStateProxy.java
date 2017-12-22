@@ -14,11 +14,8 @@ public enum ClientStateProxy {
 			
 			if(message instanceof InviteMessage) {
 				try {
-					System.out.println("COMPLETED -> TERMINATED");
-					ArrayList<String> newVias = message.getVias();
-					newVias.add(((TransactionLayerProxy)tl).getMyStringVias());
-					message.setVias(newVias);
-					((TransactionLayerProxy)tl).sendToTransportClient(message);
+					System.out.println("CALLING -> CALLING");
+					((TransactionLayerProxy)tl).sendToTransportRequest(message);
 					return this;
 				} catch (IOException e) {
 					e.printStackTrace();

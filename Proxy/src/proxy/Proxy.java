@@ -28,6 +28,9 @@ public class Proxy {
 	private static TransportLayer transportLayer;
 	public static InetAddress myAddress;
 	
+	public static String getMyStringVias() {
+		return myAddress + ":" + Integer.toString(puertoEscuchaProxy);
+	}
 	
 
 	public static void main(String[] args) {
@@ -50,15 +53,23 @@ public class Proxy {
 			System.exit(0);
 		}
 		
+//		try {
+//			myAddress = Utils.getMyAddress();
+//			System.out.println(myAddress.getHostAddress());
+//		} catch (SocketException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		
 		try {
-			myAddress = Utils.getMyAddress();
+			myAddress = InetAddress.getByName("localhost");
 			System.out.println(myAddress.getHostAddress());
-		} catch (SocketException e) {
+		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		ul = new UserLayerProxy();
+		ul = new UserLayerProxy(lr);
 		transactionLayer = new TransactionLayerProxy();
 		transportLayer = new TransportLayerProxy();
 		

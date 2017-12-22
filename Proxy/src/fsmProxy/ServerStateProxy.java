@@ -17,7 +17,7 @@ public enum ServerStateProxy {
 				try {
 					System.out.println("PROCEEDING -> PROCEEDING");
 					TryingMessage tryingMessage = (TryingMessage) SIPMessage.createResponse(SIPMessage._100_TRYING, message);
-					((TransactionLayerProxy) tl).sendToTransportServer(tryingMessage);
+					((TransactionLayerProxy) tl).sendToTransportResponse(tryingMessage);
 					tl.sendToUser(message);
 					return this;
 				} catch (IOException e) {
@@ -26,7 +26,7 @@ public enum ServerStateProxy {
 			}else if (message instanceof RingingMessage) {
 				try {
 					System.out.println("PROCEEDING -> PROCEEDING");
-					((TransactionLayerProxy) tl).sendToTransportServer(message);
+					((TransactionLayerProxy) tl).sendToTransportResponse(message);
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -42,7 +42,7 @@ public enum ServerStateProxy {
 			}else if (message instanceof OKMessage) {
 				try {
 					System.out.println("PROCEEDING -> TERMINATED");
-					((TransactionLayerProxy) tl).sendToTransportServer(message);
+					((TransactionLayerProxy) tl).sendToTransportResponse(message);
 					return TERMINATED;
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
