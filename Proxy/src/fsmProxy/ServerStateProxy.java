@@ -14,22 +14,14 @@ public enum ServerStateProxy {
 		public ServerStateProxy processMessage(SIPMessage message, TransactionLayer tl) {
 			
 			if (message instanceof InviteMessage) {
-				try {
-					System.out.println("PROCEEDING -> PROCEEDING");
-					TryingMessage tryingMessage = (TryingMessage) SIPMessage.createResponse(SIPMessage._100_TRYING, message);
-					((TransactionLayerProxy) tl).sendToTransportResponse(tryingMessage);
-					tl.sendToUser(message);
-					return this;
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				System.out.println("PROCEEDING -> PROCEEDING");
+				TryingMessage tryingMessage = (TryingMessage) SIPMessage.createResponse(SIPMessage._100_TRYING, message);
+				((TransactionLayerProxy) tl).sendToTransportResponse(tryingMessage);
+				tl.sendToUser(message);
+				return this;
 			}else if (message instanceof RingingMessage) {
-				try {
-					System.out.println("PROCEEDING -> PROCEEDING");
-					((TransactionLayerProxy) tl).sendToTransportResponse(message);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				System.out.println("PROCEEDING -> PROCEEDING");
+				((TransactionLayerProxy) tl).sendToTransportResponse(message);
 				return this;
 			}else if (message instanceof NotFoundMessage || 
 					  message instanceof ProxyAuthenticationMessage ||
@@ -40,14 +32,9 @@ public enum ServerStateProxy {
 				tl.sendError(message);
 				return COMPLETED;
 			}else if (message instanceof OKMessage) {
-				try {
-					System.out.println("PROCEEDING -> TERMINATED");
-					((TransactionLayerProxy) tl).sendToTransportResponse(message);
-					return TERMINATED;
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				System.out.println("PROCEEDING -> TERMINATED");
+				((TransactionLayerProxy) tl).sendToTransportResponse(message);
+				return TERMINATED;
 			}
 			return this;
 		}

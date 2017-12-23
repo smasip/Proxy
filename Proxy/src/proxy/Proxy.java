@@ -29,7 +29,7 @@ public class Proxy {
 	public static InetAddress myAddress;
 	
 	public static String getMyStringVias() {
-		return myAddress + ":" + Integer.toString(puertoEscuchaProxy);
+		return myAddress.getHostName() + ":" + Integer.toString(puertoEscuchaProxy);
 	}
 	
 
@@ -63,7 +63,6 @@ public class Proxy {
 		
 		try {
 			myAddress = InetAddress.getByName("localhost");
-			System.out.println(myAddress.getHostAddress());
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

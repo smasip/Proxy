@@ -29,8 +29,9 @@ public class UserLayerProxy extends UserLayer{
 		this.allowedUsers.put("sip:asdf1@dominio.es", "qwerty1");
 		this.allowedUsers.put("sip:asdf2@dominio.es", "qwerty2");
 		this.looseRouting = looseRouting;
+		this.currentTransaction = Transaction.NO_TRANSACTION;
 		this.callInProgress = false;
-		this.myRoute = "<sip:proxy.dominio.com>";
+		this.myRoute = "sip:proxy.dominio.es";
 	}
 	
 
@@ -49,8 +50,8 @@ public class UserLayerProxy extends UserLayer{
 	@Override
 	public void recvFromTransaction(SIPMessage message) {
 		
-		String key;
 		String[] s;
+		String key;
 		InetAddress address;
 		int port;
 		ArrayList<String> newVias;

@@ -1,8 +1,5 @@
 package fsmProxy;
 
-import java.io.IOException;
-import java.util.ArrayList;
-
 import mensajesSIP.*;
 import layersProxy.*;
 import layers.*;
@@ -13,13 +10,8 @@ public enum ClientStateProxy {
 		public ClientStateProxy processMessage(SIPMessage message, TransactionLayer tl) {
 			
 			if(message instanceof InviteMessage) {
-				try {
-					System.out.println("CALLING -> CALLING");
-					((TransactionLayerProxy)tl).sendToTransportRequest(message);
-					return this;
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				System.out.println("CALLING -> CALLING");
+				((TransactionLayerProxy)tl).sendToTransportRequest(message);
 			}else if (message instanceof RingingMessage) {
 				System.out.println("CALLING -> PROCEEDING");
 				tl.sendToUser(message);
@@ -47,8 +39,7 @@ public enum ClientStateProxy {
 		public ClientStateProxy processMessage(SIPMessage message, TransactionLayer tl) {
 			
 			if (message instanceof TryingMessage || 
-			    message instanceof RingingMessage) 
-			{
+			    message instanceof RingingMessage) {
 				System.out.println("PROCEEDING -> PROCEEDING");
 				tl.sendToUser(message);
 				return this;
@@ -80,7 +71,6 @@ public enum ClientStateProxy {
 				message instanceof BusyHereMessage ||
 				message instanceof ServiceUnavailableMessage) 
 			{
-				System.out.println("COMPLETED -> TERMINATED");
 				tl.sendACK(message);
 			}
 			
