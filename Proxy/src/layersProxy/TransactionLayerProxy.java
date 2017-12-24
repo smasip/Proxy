@@ -63,8 +63,12 @@ public class TransactionLayerProxy extends TransactionLayer{
 	 	ack.setFromUri(error.getFromUri());
 	 	ack.setcSeqStr("ACK");
 	 	ack.setcSeqNumber("1");
+	 	
+	 	sendToTransportRequest(ack);
    	 	
    	 	if(taskClient == null) {
+   	 		
+   	 		ul.recvFromTransaction(error);
    	 		
    	 		taskClient = new TimerTask() {
 			
@@ -76,7 +80,8 @@ public class TransactionLayerProxy extends TransactionLayer{
 						currentCallId = null;
 						destination = null;
 					}
-					System.out.println("COMPLETED -> TERMINATED");
+					System.out.println("CLIENT: COMPLETED -> TERMINATED");
+					taskClient.cancel();
 					taskClient = null;
 				}
    	 		};
@@ -84,8 +89,6 @@ public class TransactionLayerProxy extends TransactionLayer{
 			timerClient.schedule(taskClient, 1000);
    	 	}
    	 	
-   	 	
-   	 	sendToTransportRequest(ack);
 		
 	}
 	
@@ -100,7 +103,7 @@ public class TransactionLayerProxy extends TransactionLayer{
 			
 				@Override
 				public void run() {
-					if(numTimes <= 4) {
+					if(numTimes < 4) {
 						sendToTransportResponse(error);
 						numTimes++;
 					}else {
@@ -147,13 +150,16 @@ public class TransactionLayerProxy extends TransactionLayer{
 					ServiceUnavailableMessage serviceUnavailable = (ServiceUnavailableMessage) SIPMessage.createResponse(
 							SIPMessage._503_SERVICE_UNABAILABLE, message);
 					sendToTransportResponse(serviceUnavailable);
-				}else {
+				}else if(message instanceof ACKMessage) {
+					server = server.processMessage(message, this);
+				}else{
 					client = client.processMessage(message, this);
-					if((server == ServerStateProxy.TERMINATED) && (client == ClientStateProxy.TERMINATED)){
-						currentTransaction = Transaction.NO_TRANSACTION;
-						currentCallId = null;
-						destination = null;
-					}
+				}
+				
+				if((server == ServerStateProxy.TERMINATED) && (client == ClientStateProxy.TERMINATED)){
+					currentTransaction = Transaction.NO_TRANSACTION;
+					currentCallId = null;
+					destination = null;
 				}
 				
 				break;

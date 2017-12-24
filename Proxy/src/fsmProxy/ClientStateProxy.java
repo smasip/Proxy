@@ -10,14 +10,14 @@ public enum ClientStateProxy {
 		public ClientStateProxy processMessage(SIPMessage message, TransactionLayer tl) {
 			
 			if(message instanceof InviteMessage) {
-				System.out.println("CALLING -> CALLING");
+				System.out.println("CLIENT: CALLING -> CALLING");
 				((TransactionLayerProxy)tl).sendToTransportRequest(message);
 			}else if (message instanceof RingingMessage) {
-				System.out.println("CALLING -> PROCEEDING");
+				System.out.println("CLIENT: CALLING -> PROCEEDING");
 				tl.sendToUser(message);
 				return PROCEEDING;
 			}else if (message instanceof OKMessage) {
-				System.out.println("CALLING -> TERMINATED");
+				System.out.println("CLIENT: CALLING -> TERMINATED");
 				tl.sendToUser(message);
 				return TERMINATED;
 			}else if (message instanceof NotFoundMessage || 
@@ -26,7 +26,7 @@ public enum ClientStateProxy {
 					  message instanceof BusyHereMessage ||
 					  message instanceof ServiceUnavailableMessage) 
 			{
-				System.out.println("CALLING -> COMPLETED");
+				System.out.println("CLIENT: CALLING -> COMPLETED");
 				tl.sendACK(message);
 				return COMPLETED;
 			}
@@ -40,11 +40,11 @@ public enum ClientStateProxy {
 			
 			if (message instanceof TryingMessage || 
 			    message instanceof RingingMessage) {
-				System.out.println("PROCEEDING -> PROCEEDING");
+				System.out.println("CLIENT: PROCEEDING -> PROCEEDING");
 				tl.sendToUser(message);
 				return this;
 			}else if (message instanceof OKMessage) {
-				System.out.println("PROCEEDING -> TERMINATED");
+				System.out.println("CLIENT: PROCEEDING -> TERMINATED");
 				tl.sendToUser(message);
 				return TERMINATED;
 			}else if (message instanceof NotFoundMessage || 
@@ -53,7 +53,7 @@ public enum ClientStateProxy {
 					  message instanceof BusyHereMessage ||
 					  message instanceof ServiceUnavailableMessage) 
 			{
-				System.out.println("PROCEEDING -> COMPLETED");
+				System.out.println("CLIENT: PROCEEDING -> COMPLETED");
 				tl.sendACK(message);
 				return COMPLETED;
 			}
