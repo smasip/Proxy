@@ -77,7 +77,8 @@ public class UserLayerProxy extends UserLayer{
 							s = locationService.get(key).split(":");
 							
 							try {
-								
+
+								currentTransaction = Transaction.BYE_TRANSACTION;
 								address = InetAddress.getByName(s[0]);
 								port = Integer.valueOf(s[1]);
 								((TransactionLayerProxy)transactionLayer).setRequestAddress(address);
@@ -108,6 +109,7 @@ public class UserLayerProxy extends UserLayer{
 						
 						callInProgress = true;
 						currentTransaction = Transaction.INVITE_TRANSACTION;
+						currentCallId = message.getCallId();
 						
 						address = InetAddress.getByName(s[0]);
 						port = Integer.valueOf(s[1]);

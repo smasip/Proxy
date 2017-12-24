@@ -136,6 +136,7 @@ public class TransactionLayerProxy extends TransactionLayer{
 		if(message instanceof RegisterMessage) {
 			SIPMessage response = ((UserLayerProxy)ul).registerUser((RegisterMessage)message);
 			sendToTransportResponse(response);
+			return;
 		}
 		
 		switch (currentTransaction) {
@@ -148,6 +149,11 @@ public class TransactionLayerProxy extends TransactionLayer{
 					sendToTransportResponse(serviceUnavailable);
 				}else {
 					client = client.processMessage(message, this);
+					if((server == ServerStateProxy.TERMINATED) && (client == ClientStateProxy.TERMINATED)){
+						currentTransaction = Transaction.NO_TRANSACTION;
+						currentCallId = null;
+						destination = null;
+					}
 				}
 				
 				break;
@@ -164,6 +170,7 @@ public class TransactionLayerProxy extends TransactionLayer{
 					ul.recvFromTransaction(message);
 				}else if(message instanceof ByeMessage) {
 					currentTransaction = Transaction.BYE_TRANSACTION;
+					currentCallId = message.getCallId();
 					ul.recvFromTransaction(message);
 				}
 				
@@ -171,9 +178,14 @@ public class TransactionLayerProxy extends TransactionLayer{
 				
 				
 			case BYE_TRANSACTION:
-				if(message instanceof OKMessage) {
+				if(message.getCallId().equals(currentCallId) && (message instanceof OKMessage)) {
 					ul.recvFromTransaction(message);
+				}else {
+					ServiceUnavailableMessage serviceUnavailable = (ServiceUnavailableMessage) SIPMessage.createResponse(
+							SIPMessage._503_SERVICE_UNABAILABLE, message);
+					sendToTransportResponse(serviceUnavailable);
 				}
+				
 				break;
 				
 			default:
@@ -194,11 +206,6 @@ public class TransactionLayerProxy extends TransactionLayer{
 					client = client.processMessage(message, this);
 				}else {
 					server = server.processMessage(message, this);
-					if(server == ServerStateProxy.TERMINATED && client == ClientStateProxy.TERMINATED){
-						currentTransaction = Transaction.NO_TRANSACTION;
-						currentCallId = null;
-						destination = null;
-					}
 				}
 				
 				break;
@@ -208,13 +215,17 @@ public class TransactionLayerProxy extends TransactionLayer{
 					sendToTransportRequest(message);
 				}else if(message instanceof OKMessage) {
 					currentTransaction = Transaction.NO_TRANSACTION;
+					currentCallId = null;
 					sendToTransportResponse(message);
 				}
 				break;
 			
-			case ACK_TRANSACTION:
-				sendToTransportRequest(message);
+			case NO_TRANSACTION:
+				if(message instanceof ACKMessage) {
+					sendToTransportRequest(message);
+				}
 				break;	
+				
 			default:
 				break;
 		}
