@@ -108,9 +108,9 @@ public class UserLayerProxy extends UserLayer{
 					GenericSIPServlet servlet;
 						try {
 							if(caller.equals("sip:asdf1@dominio.es")) {
-								servlet = (GenericSIPServlet) Class.forName("servlet.personalServlets.SIPServlet1").newInstance();
+								servlet = (GenericSIPServlet) Class.forName("servlets.personalServlets.SIPServlet1").newInstance();
 							}else {
-								servlet = (GenericSIPServlet) Class.forName("servlet.personalServlets.SIPServlet2").newInstance();
+								servlet = (GenericSIPServlet) Class.forName("servlets.personalServlets.SIPServlet2").newInstance();
 							}
 							servlet.doInvite(request);
 						} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
