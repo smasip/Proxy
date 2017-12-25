@@ -17,6 +17,8 @@ public class UserLayerProxy extends UserLayer{
 	private String currentCallId;
 	private boolean callInProgress;
 	private Transaction currentTransaction;
+	private InetAddress requestAddress;
+	private int resquestPort;
 	
 	public void setParameters(String currentCallId, boolean callInProgress, Transaction currentTransaction) {
 		this.currentCallId = currentCallId;
@@ -48,8 +50,6 @@ public class UserLayerProxy extends UserLayer{
 		
 		String[] s;
 		String key;
-		InetAddress requestAddress;
-		int resquestPort;
 		ArrayList<String> newVias;
 		
 		switch (currentTransaction) {
@@ -65,7 +65,7 @@ public class UserLayerProxy extends UserLayer{
 							newVias = message.getVias();
 							newVias.add(0, Proxy.getMyStringVias());
 							message.setVias(newVias);
-							((TransactionLayerProxy)transactionLayer).recvResponseFromUser(message);
+							((TransactionLayerProxy)transactionLayer).recvRequestFromUser(message, requestAddress, resquestPort);
 							
 						}else if (message instanceof ByeMessage){
 							
@@ -127,7 +127,7 @@ public class UserLayerProxy extends UserLayer{
 			case INVITE_TRANSACTION:
 				
 				if(message instanceof OKMessage) {
-					if(!Proxy.lr) {
+					if(!(Proxy.lr)) {
 						callInProgress = false;
 						currentCallId = null;
 					}
