@@ -11,6 +11,9 @@ import java.util.Map;
 import layers.*;
 import mensajesSIP.*;
 import proxy.Proxy;
+import servlets.impl.SipServletRequest;
+import servlets.interfaces.SipServletRequestInterface;
+import servlets.personalServlets.GenericSIPServlet;
 
 public class UserLayerProxy extends UserLayer{
 	
@@ -97,29 +100,24 @@ public class UserLayerProxy extends UserLayer{
 					
 				}else if(message instanceof InviteMessage) {
 					
-					key = message.getToUri();
-					s = Proxy.locationService.get(key).split(":");
-					try {
-						
-						callInProgress = true;
-						currentTransaction = Transaction.INVITE_TRANSACTION;
-						currentCallId = message.getCallId();
-						
-						requestAddress = InetAddress.getByName(s[0]);
-						resquestPort = Integer.valueOf(s[1]);
-						newVias = message.getVias();
-						newVias.add(0, Proxy.getMyStringVias());
-						message.setVias(newVias);
-						if(Proxy.lr) {
-							((InviteMessage)message).setRecordRoute(Proxy.myRoute);
+					SipServletRequestInterface request = new SipServletRequest(
+							(TransactionLayerProxy)transactionLayer, 
+							(InviteMessage) message);
+					String caller = request.getCallerURI();
+					
+					GenericSIPServlet servlet;
+						try {
+							if(caller.equals("sip:asdf1@dominio.es")) {
+								servlet = (GenericSIPServlet) Class.forName("servlet.personalServlets.SIPServlet1").newInstance();
+							}else {
+								servlet = (GenericSIPServlet) Class.forName("servlet.personalServlets.SIPServlet2").newInstance();
+							}
+							servlet.doInvite(request);
+						} catch (InstantiationException | IllegalAccessException | ClassNotFoundException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
 						}
 						
-						((TransactionLayerProxy)transactionLayer).recvRequestFromUser(message, requestAddress, resquestPort);
-						
-					} catch (UnknownHostException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
 				}
 				
 				break;
