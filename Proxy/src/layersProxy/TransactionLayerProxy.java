@@ -26,15 +26,6 @@ public class TransactionLayerProxy extends TransactionLayer{
 	private String currentCallId;
 	private String destination;
 
-	public void setRequestAddress(InetAddress requestAddress) {
-		this.requestAddress = requestAddress;
-	}
-
-	public void setRequestPort(int requestPort) {
-		this.requestPort = requestPort;
-	}
-
-
 	public TransactionLayerProxy() {
 		super();
 		this.client = ClientStateProxy.TERMINATED;
@@ -75,7 +66,7 @@ public class TransactionLayerProxy extends TransactionLayer{
 				@Override
 				public void run() {
 					client = ClientStateProxy.TERMINATED;
-					if(server == ServerStateProxy.TERMINATED && client == ClientStateProxy.TERMINATED){
+					if((server == ServerStateProxy.TERMINATED) && (client == ClientStateProxy.TERMINATED)){
 						currentTransaction = Transaction.NO_TRANSACTION;
 						currentCallId = null;
 						destination = null;
@@ -108,7 +99,7 @@ public class TransactionLayerProxy extends TransactionLayer{
 						numTimes++;
 					}else {
 						server = ServerStateProxy.TERMINATED;
-						if(server == ServerStateProxy.TERMINATED && client == ClientStateProxy.TERMINATED){
+						if((server == ServerStateProxy.TERMINATED) && (client == ClientStateProxy.TERMINATED)){
 							currentTransaction = Transaction.NO_TRANSACTION;
 							currentCallId = null;
 							destination = null;
@@ -170,26 +161,9 @@ public class TransactionLayerProxy extends TransactionLayer{
 					currentTransaction = Transaction.INVITE_TRANSACTION;
 					currentCallId = message.getCallId();
 					destination = ((InviteMessage)message).getDestination();
-					server = ServerStateProxy.PROCEEDING;
 					server = server.processMessage(message, this);
-				}else if(message instanceof ACKMessage) {
+				}else{
 					ul.recvFromTransaction(message);
-				}else if(message instanceof ByeMessage) {
-					currentTransaction = Transaction.BYE_TRANSACTION;
-					currentCallId = message.getCallId();
-					ul.recvFromTransaction(message);
-				}
-				
-				break;
-				
-				
-			case BYE_TRANSACTION:
-				if(message.getCallId().equals(currentCallId) && (message instanceof OKMessage)) {
-					ul.recvFromTransaction(message);
-				}else {
-					ServiceUnavailableMessage serviceUnavailable = (ServiceUnavailableMessage) SIPMessage.createResponse(
-							SIPMessage._503_SERVICE_UNABAILABLE, message);
-					sendToTransportResponse(serviceUnavailable);
 				}
 				
 				break;
@@ -200,44 +174,44 @@ public class TransactionLayerProxy extends TransactionLayer{
 		}
 		
 	}
-
-	public void recvFromUser(SIPMessage message) {
+	
+	public void recvRequestFromUser(SIPMessage request, InetAddress requestAddress, int requestPort) {
+		
+		this.requestAddress = requestAddress;
+		this.requestPort = requestPort;
 		
 		switch (currentTransaction) {
 		
 			case INVITE_TRANSACTION:
-				
-				if(message instanceof InviteMessage) {
-					client = ClientStateProxy.CALLING;
-					client = client.processMessage(message, this);
-				}else {
-					server = server.processMessage(message, this);
-				}
-				
+				client = client.processMessage(request, this);
 				break;
 				
-			case BYE_TRANSACTION:
-				if(message instanceof ByeMessage) {
-					sendToTransportRequest(message);
-				}else if(message instanceof OKMessage) {
-					currentTransaction = Transaction.NO_TRANSACTION;
-					currentCallId = null;
-					sendToTransportResponse(message);
-				}
-				break;
-			
 			case NO_TRANSACTION:
-				if(message instanceof ACKMessage) {
-					sendToTransportRequest(message);
-				}
-				break;	
+				sendToTransportRequest(request);
+				break;
+				
+			default:
+				break;
+		}
+	}
+	
+	public void recvResponseFromUser(SIPMessage response) {
+		
+		switch (currentTransaction) {
+		
+			case INVITE_TRANSACTION:
+				server = server.processMessage(response, this);
+				break;
+				
+			case NO_TRANSACTION:
+				sendToTransportResponse(response);
+				break;
 				
 			default:
 				break;
 		}
 	}
 		
-	
 	
 	public void sendToTransportRequest(SIPMessage message){
 		try {

@@ -14,30 +14,26 @@ import proxy.Proxy;
 
 public class UserLayerProxy extends UserLayer{
 	
-	private Map<String, String> locationService;
-	private Map<String, String> allowedUsers;
 	private String currentCallId;
 	private boolean callInProgress;
-	private boolean looseRouting;
 	private Transaction currentTransaction;
-	String myRoute;
 	
-	public UserLayerProxy(boolean looseRouting) {
+	public void setParameters(String currentCallId, boolean callInProgress, Transaction currentTransaction) {
+		this.currentCallId = currentCallId;
+		this.callInProgress = callInProgress;
+		this.currentTransaction = currentTransaction;
+	}
+	
+	public UserLayerProxy() {
 		super();
-		this.locationService = new HashMap<String, String>();
-		this.allowedUsers = new HashMap<String, String>();
-		this.allowedUsers.put("sip:asdf1@dominio.es", "qwerty1");
-		this.allowedUsers.put("sip:asdf2@dominio.es", "qwerty2");
-		this.looseRouting = looseRouting;
 		this.currentTransaction = Transaction.NO_TRANSACTION;
 		this.callInProgress = false;
-		this.myRoute = "sip:proxy.dominio.es";
 	}
 	
 
 	public SIPMessage registerUser(RegisterMessage message) {
-		if(allowedUsers.containsKey(message.getToUri())) {
-			locationService.put(message.getToUri(), message.getContact().split("@")[1]);
+		if(Proxy.allowedUsers.containsKey(message.getToUri())) {
+			Proxy.locationService.put(message.getToUri(), message.getContact().split("@")[1]);
 			OKMessage ok = (OKMessage) SIPMessage.createResponse(SIPMessage._200_OK, message);
 			return ok;
 		}else {
@@ -52,8 +48,8 @@ public class UserLayerProxy extends UserLayer{
 		
 		String[] s;
 		String key;
-		InetAddress address;
-		int port;
+		InetAddress requestAddress;
+		int resquestPort;
 		ArrayList<String> newVias;
 		
 		switch (currentTransaction) {
@@ -69,24 +65,22 @@ public class UserLayerProxy extends UserLayer{
 							newVias = message.getVias();
 							newVias.add(0, Proxy.getMyStringVias());
 							message.setVias(newVias);
-							((TransactionLayerProxy)transactionLayer).recvFromUser(message);
+							((TransactionLayerProxy)transactionLayer).recvResponseFromUser(message);
 							
 						}else if (message instanceof ByeMessage){
 							
 							key = message.getToUri();
-							s = locationService.get(key).split(":");
+							s = Proxy.locationService.get(key).split(":");
 							
 							try {
 
 								currentTransaction = Transaction.BYE_TRANSACTION;
-								address = InetAddress.getByName(s[0]);
-								port = Integer.valueOf(s[1]);
-								((TransactionLayerProxy)transactionLayer).setRequestAddress(address);
-								((TransactionLayerProxy)transactionLayer).setRequestPort(port);
+								requestAddress = InetAddress.getByName(s[0]);
+								resquestPort = Integer.valueOf(s[1]);
 								newVias = message.getVias();
 								newVias.add(0, Proxy.getMyStringVias());
 								message.setVias(newVias);
-								((TransactionLayerProxy)transactionLayer).recvFromUser(message);
+								((TransactionLayerProxy)transactionLayer).recvRequestFromUser(message, requestAddress, resquestPort);
 								
 							} catch (UnknownHostException e) {
 								// TODO Auto-generated catch block
@@ -98,31 +92,29 @@ public class UserLayerProxy extends UserLayer{
 					}else {
 						ServiceUnavailableMessage serviceUnavailable = (ServiceUnavailableMessage) SIPMessage.createResponse(
 								SIPMessage._503_SERVICE_UNABAILABLE, message);
-						((TransactionLayerProxy)transactionLayer).recvFromUser(serviceUnavailable);
+						((TransactionLayerProxy)transactionLayer).recvResponseFromUser(serviceUnavailable);
 					}
 					
 				}else if(message instanceof InviteMessage) {
 					
 					key = message.getToUri();
-					s = locationService.get(key).split(":");
+					s = Proxy.locationService.get(key).split(":");
 					try {
 						
 						callInProgress = true;
 						currentTransaction = Transaction.INVITE_TRANSACTION;
 						currentCallId = message.getCallId();
 						
-						address = InetAddress.getByName(s[0]);
-						port = Integer.valueOf(s[1]);
-						((TransactionLayerProxy)transactionLayer).setRequestAddress(address);
-						((TransactionLayerProxy)transactionLayer).setRequestPort(port);
+						requestAddress = InetAddress.getByName(s[0]);
+						resquestPort = Integer.valueOf(s[1]);
 						newVias = message.getVias();
 						newVias.add(0, Proxy.getMyStringVias());
 						message.setVias(newVias);
-						if(looseRouting) {
-							((InviteMessage)message).setRecordRoute(myRoute);
+						if(Proxy.lr) {
+							((InviteMessage)message).setRecordRoute(Proxy.myRoute);
 						}
 						
-						((TransactionLayerProxy)transactionLayer).recvFromUser(message);
+						((TransactionLayerProxy)transactionLayer).recvRequestFromUser(message, requestAddress, resquestPort);
 						
 					} catch (UnknownHostException e) {
 						// TODO Auto-generated catch block
@@ -135,7 +127,7 @@ public class UserLayerProxy extends UserLayer{
 			case INVITE_TRANSACTION:
 				
 				if(message instanceof OKMessage) {
-					if(!looseRouting) {
+					if(!Proxy.lr) {
 						callInProgress = false;
 						currentCallId = null;
 					}
@@ -148,7 +140,7 @@ public class UserLayerProxy extends UserLayer{
 				
 				newVias = message.getVias();
 				newVias.remove(0);
-				((TransactionLayerProxy)transactionLayer).recvFromUser(message);
+				((TransactionLayerProxy)transactionLayer).recvResponseFromUser(message);
 				
 				break;
 				
@@ -160,7 +152,7 @@ public class UserLayerProxy extends UserLayer{
 					currentCallId = null;
 					newVias = message.getVias();
 					newVias.remove(0);
-					((TransactionLayerProxy)transactionLayer).recvFromUser(message);
+					((TransactionLayerProxy)transactionLayer).recvResponseFromUser(message);
 				}
 				
 				break;

@@ -23,10 +23,13 @@ public class Proxy {
 	public static int puertoEscuchaProxy;
 	private static boolean debug;
 	public static boolean lr;
+	public static Map<String, String> locationService;
+	public static Map<String, String> allowedUsers;
 	private static UserLayerProxy ul;
 	private static TransactionLayerProxy transactionLayer;
 	private static TransportLayer transportLayer;
 	public static InetAddress myAddress;
+	public static String myRoute = "sip:proxy.dominio.es";
 	
 	public static String getMyStringVias() {
 		return myAddress.getHostName() + ":" + Integer.toString(puertoEscuchaProxy);
@@ -68,7 +71,12 @@ public class Proxy {
 			e.printStackTrace();
 		}
 		
-		ul = new UserLayerProxy(lr);
+		locationService = new HashMap<String, String>();
+		allowedUsers = new HashMap<String, String>();
+		allowedUsers.put("sip:asdf1@dominio.es", "qwerty1");
+		allowedUsers.put("sip:asdf2@dominio.es", "qwerty2");
+		
+		ul = new UserLayerProxy();
 		transactionLayer = new TransactionLayerProxy();
 		transportLayer = new TransportLayerProxy();
 		
