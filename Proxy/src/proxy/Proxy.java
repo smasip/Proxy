@@ -12,10 +12,8 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import mensajesSIP.*;
 import utils.Utils;
-import layers.*;
-import layersProxy.TransactionLayerProxy;
-import layersProxy.TransportLayerProxy;
-import layersProxy.UserLayerProxy;
+import layers.Proxy.*;;
+
 
 public class Proxy {
 	
@@ -27,7 +25,7 @@ public class Proxy {
 	public static Map<String, String> allowedUsers;
 	private static UserLayerProxy ul;
 	private static TransactionLayerProxy transactionLayer;
-	private static TransportLayer transportLayer;
+	private static TransportLayerProxy transportLayer;
 	public static InetAddress myAddress;
 	public static String myRoute = "sip:proxy.dominio.es";
 	
@@ -84,9 +82,11 @@ public class Proxy {
 		
 		transactionLayer.setTransportLayer(transportLayer);
 		transactionLayer.setUl(ul);
+		transactionLayer.setMyStringVias(getMyStringVias());
 		
 		transportLayer.setTransactionLayer(transactionLayer);
 		transportLayer.setDatagramSocket(datagramSocket);
+		
 		transportLayer.recvFromNetwork();
 		
 	}
