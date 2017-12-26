@@ -15,7 +15,7 @@ public enum ServerStateProxy {
 			
 			if (message instanceof RingingMessage) {
 				System.out.println("SERVER: PROCEEDING -> PROCEEDING");
-				((TransactionLayerProxy) tl).sendToTransportResponse(message);
+				tl.sendResponse(message);
 				return this;
 			}else if (message instanceof NotFoundMessage || 
 					  message instanceof ProxyAuthenticationMessage ||
@@ -27,7 +27,7 @@ public enum ServerStateProxy {
 				return COMPLETED;
 			}else if (message instanceof OKMessage) {
 				System.out.println("SERVER: PROCEEDING -> TERMINATED");
-				((TransactionLayerProxy) tl).sendToTransportResponse(message);
+				tl.sendResponse(message);
 				return TERMINATED;
 			}
 			return this;
@@ -54,7 +54,7 @@ public enum ServerStateProxy {
 			if (message instanceof InviteMessage) {
 				System.out.println("SERVER: TERMINATED -> PROCEEDING");
 				TryingMessage tryingMessage = (TryingMessage) SIPMessage.createResponse(SIPMessage._100_TRYING, message);
-				((TransactionLayerProxy) tl).sendToTransportResponse(tryingMessage);
+				tl.sendResponse(tryingMessage);
 				tl.sendToUser(message);
 				return PROCEEDING;
 			}

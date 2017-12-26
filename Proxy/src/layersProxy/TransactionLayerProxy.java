@@ -14,8 +14,6 @@ import proxy.Proxy;
 
 public class TransactionLayerProxy extends TransactionLayer{
 	
-	InetAddress requestAddress;
-	int requestPort;
 	ClientStateProxy client;
 	ServerStateProxy server;
 	Transaction currentTransaction;
@@ -55,7 +53,7 @@ public class TransactionLayerProxy extends TransactionLayer{
 	 	ack.setcSeqStr("ACK");
 	 	ack.setcSeqNumber("1");
 	 	
-	 	sendToTransportRequest(ack);
+	 	sendRequest(ack);
    	 	
    	 	if(taskClient == null) {
    	 		
@@ -95,7 +93,7 @@ public class TransactionLayerProxy extends TransactionLayer{
 				@Override
 				public void run() {
 					if(numTimes < 4) {
-						sendToTransportResponse(error);
+						sendResponse(error);
 						numTimes++;
 					}else {
 						server = ServerStateProxy.TERMINATED;
@@ -129,7 +127,7 @@ public class TransactionLayerProxy extends TransactionLayer{
 		
 		if(message instanceof RegisterMessage) {
 			SIPMessage response = ((UserLayerProxy)ul).registerUser((RegisterMessage)message);
-			sendToTransportResponse(response);
+			sendResponse(response);
 			return;
 		}
 		
@@ -140,7 +138,7 @@ public class TransactionLayerProxy extends TransactionLayer{
 				if(!message.getCallId().equals(currentCallId)) {
 					ServiceUnavailableMessage serviceUnavailable = (ServiceUnavailableMessage) SIPMessage.createResponse(
 							SIPMessage._503_SERVICE_UNABAILABLE, message);
-					sendToTransportResponse(serviceUnavailable);
+					sendResponse(serviceUnavailable);
 				}else if(message instanceof ACKMessage) {
 					server = server.processMessage(message, this);
 				}else{
@@ -187,7 +185,7 @@ public class TransactionLayerProxy extends TransactionLayer{
 				break;
 				
 			case NO_TRANSACTION:
-				sendToTransportRequest(request);
+				sendRequest(request);
 				break;
 				
 			default:
@@ -204,7 +202,7 @@ public class TransactionLayerProxy extends TransactionLayer{
 				break;
 				
 			case NO_TRANSACTION:
-				sendToTransportResponse(response);
+				sendResponse(response);
 				break;
 				
 			default:
@@ -212,27 +210,5 @@ public class TransactionLayerProxy extends TransactionLayer{
 		}
 	}
 		
-	
-	public void sendToTransportRequest(SIPMessage message){
-		try {
-			transportLayer.sendToNetwork(requestAddress, requestPort, message);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	public void sendToTransportResponse(SIPMessage message){
-		String s[] = message.getVias().get(0).split(":");
-		try {
-			transportLayer.sendToNetwork(InetAddress.getByName(s[0]), Integer.valueOf(s[1]), message);
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
 
 }

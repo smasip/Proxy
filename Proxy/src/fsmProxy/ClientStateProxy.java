@@ -81,7 +81,7 @@ public enum ClientStateProxy {
 		public ClientStateProxy processMessage(SIPMessage message, TransactionLayer tl) {
 			if(message instanceof InviteMessage) {
 				System.out.println("CLIENT: TERMINATED -> CALLING");
-				((TransactionLayerProxy)tl).sendToTransportRequest(message);
+				tl.sendRequest(message);
 				return CALLING;
 			}
 			return this;

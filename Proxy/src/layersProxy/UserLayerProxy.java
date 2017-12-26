@@ -65,7 +65,7 @@ public class UserLayerProxy extends UserLayer{
 							newVias = message.getVias();
 							newVias.add(0, Proxy.getMyStringVias());
 							message.setVias(newVias);
-							((TransactionLayerProxy)transactionLayer).recvRequestFromUser(message, requestAddress, resquestPort);
+							transactionLayer.recvRequestFromUser(message, requestAddress, resquestPort);
 							
 						}else if (message instanceof ByeMessage){
 							
@@ -80,7 +80,7 @@ public class UserLayerProxy extends UserLayer{
 								newVias = message.getVias();
 								newVias.add(0, Proxy.getMyStringVias());
 								message.setVias(newVias);
-								((TransactionLayerProxy)transactionLayer).recvRequestFromUser(message, requestAddress, resquestPort);
+								transactionLayer.recvRequestFromUser(message, requestAddress, resquestPort);
 								
 							} catch (UnknownHostException e) {
 								// TODO Auto-generated catch block
@@ -92,7 +92,7 @@ public class UserLayerProxy extends UserLayer{
 					}else {
 						ServiceUnavailableMessage serviceUnavailable = (ServiceUnavailableMessage) SIPMessage.createResponse(
 								SIPMessage._503_SERVICE_UNABAILABLE, message);
-						((TransactionLayerProxy)transactionLayer).recvResponseFromUser(serviceUnavailable);
+						transactionLayer.recvResponseFromUser(serviceUnavailable);
 					}
 					
 				}else if(message instanceof InviteMessage) {
@@ -114,7 +114,7 @@ public class UserLayerProxy extends UserLayer{
 							((InviteMessage)message).setRecordRoute(Proxy.myRoute);
 						}
 						
-						((TransactionLayerProxy)transactionLayer).recvRequestFromUser(message, requestAddress, resquestPort);
+						transactionLayer.recvRequestFromUser(message, requestAddress, resquestPort);
 						
 					} catch (UnknownHostException e) {
 						// TODO Auto-generated catch block
@@ -140,7 +140,7 @@ public class UserLayerProxy extends UserLayer{
 				
 				newVias = message.getVias();
 				newVias.remove(0);
-				((TransactionLayerProxy)transactionLayer).recvResponseFromUser(message);
+				transactionLayer.recvResponseFromUser(message);
 				
 				break;
 				
@@ -152,7 +152,7 @@ public class UserLayerProxy extends UserLayer{
 					currentCallId = null;
 					newVias = message.getVias();
 					newVias.remove(0);
-					((TransactionLayerProxy)transactionLayer).recvResponseFromUser(message);
+					transactionLayer.recvResponseFromUser(message);
 				}
 				
 				break;
