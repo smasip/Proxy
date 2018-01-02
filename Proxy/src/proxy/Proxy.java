@@ -12,7 +12,9 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import mensajesSIP.*;
 import utils.Utils;
-import layers.Proxy.*;;
+import layersProxy.TransactionLayerProxy;
+import layersProxy.TransportLayerProxy;
+import layersProxy.UserLayerProxy;;
 
 
 public class Proxy {
@@ -31,6 +33,12 @@ public class Proxy {
 	
 	public static String getMyStringVias() {
 		return myAddress.getHostName() + ":" + Integer.toString(puertoEscuchaProxy);
+	}
+	
+	public static ArrayList<String> getMyVias() {
+		ArrayList<String> vias = new ArrayList<String>();
+		vias.add(getMyStringVias());
+		return vias;
 	}
 	
 
@@ -73,6 +81,7 @@ public class Proxy {
 		allowedUsers = new HashMap<String, String>();
 		allowedUsers.put("sip:asdf1@dominio.es", "qwerty1");
 		allowedUsers.put("sip:asdf2@dominio.es", "qwerty2");
+		allowedUsers.put("sip:asdf3@dominio.es", "qwerty3");
 		
 		ul = new UserLayerProxy();
 		transactionLayer = new TransactionLayerProxy();
@@ -82,7 +91,6 @@ public class Proxy {
 		
 		transactionLayer.setTransportLayer(transportLayer);
 		transactionLayer.setUl(ul);
-		transactionLayer.setMyStringVias(getMyStringVias());
 		
 		transportLayer.setTransactionLayer(transactionLayer);
 		transportLayer.setDatagramSocket(datagramSocket);

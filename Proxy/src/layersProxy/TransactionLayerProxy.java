@@ -1,125 +1,41 @@
 package layersProxy;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Timer;
-import java.util.TimerTask;
-
-import fsmProxy.*;
+import fsm.ClientFSM;
+import fsm.ServerFSM;
 import layers.*;
 import mensajesSIP.*;
 import proxy.Proxy;
 
 public class TransactionLayerProxy extends TransactionLayer{
-	
-	ClientStateProxy client;
-	ServerStateProxy server;
-	Transaction currentTransaction;
-	private Timer timerServer;
-	private TimerTask taskServer;
-	private Timer timerClient;
-	private TimerTask taskClient;
-	private String currentCallId;
-	private String destination;
+
 
 	public TransactionLayerProxy() {
 		super();
-		this.client = ClientStateProxy.TERMINATED;
-		this.server = ServerStateProxy.TERMINATED;
 		this.currentTransaction = Transaction.NO_TRANSACTION;
-		this.timerServer = new Timer();
-		this.timerClient = new Timer();
-		this.taskServer = null;
-		this.taskClient = null;
-		this.currentCallId = null;
+		this.callId = null;
 		this.destination = null;
+		this.myVias = Proxy.getMyVias();
+		this.client = new ClientFSM(this);
+		this.server = new ServerFSM(this) {
+			
+			@Override
+			public void onInvite(InviteMessage invite) {
+				TryingMessage tryingMessage = (TryingMessage) SIPMessage.createResponse(SIPMessage._100_TRYING, invite);
+				transactionLayer.sendResponse(tryingMessage);
+				transactionLayer.sendToUser(invite);
+				
+			}
+		};
 	}
 	
-
-	public void sendACK(SIPMessage error) {
-		
-		ACKMessage ack = new ACKMessage();
-		
-		ArrayList<String> vias = new ArrayList<String>();
-		vias.add(Proxy.getMyStringVias());
-   	 	
-   	 	ack.setDestination(destination);
-   	 	ack.setVias(vias);
-   	 	ack.setCallId(currentCallId);
-	 	ack.setToUri(error.getToUri());
-	 	ack.setFromUri(error.getFromUri());
-	 	ack.setcSeqStr("ACK");
-	 	ack.setcSeqNumber("1");
-	 	
-	 	sendRequest(ack);
-   	 	
-   	 	if(taskClient == null) {
-   	 		
-   	 		ul.recvFromTransaction(error);
-   	 		
-   	 		taskClient = new TimerTask() {
-			
-				@Override
-				public void run() {
-					client = ClientStateProxy.TERMINATED;
-					if((server == ServerStateProxy.TERMINATED) && (client == ClientStateProxy.TERMINATED)){
-						currentTransaction = Transaction.NO_TRANSACTION;
-						currentCallId = null;
-						destination = null;
-					}
-					System.out.println("CLIENT: COMPLETED -> TERMINATED");
-					taskClient.cancel();
-					taskClient = null;
-				}
-   	 		};
-		
-			timerClient.schedule(taskClient, 1000);
-   	 	}
-   	 	
-		
-	}
-	
-	
-	public void sendError(SIPMessage error) {
-			
-		if(taskServer == null) {
-			
-   	 		taskServer = new TimerTask() {
-   	 			
-   	 			int numTimes = 0;
-			
-				@Override
-				public void run() {
-					if(numTimes < 4) {
-						sendResponse(error);
-						numTimes++;
-					}else {
-						server = ServerStateProxy.TERMINATED;
-						if((server == ServerStateProxy.TERMINATED) && (client == ClientStateProxy.TERMINATED)){
-							currentTransaction = Transaction.NO_TRANSACTION;
-							currentCallId = null;
-							destination = null;
-						}
-						taskServer.cancel();
-						taskServer = null;
-					}
-				}
-   	 		};
-		
-			timerServer.schedule(taskServer, 200);
-   	 	}
-			
-	}
-	
-	public void cancelTimer() {
-		if(taskServer != null) {
-			taskServer.cancel();
-			taskServer = null;
+	@Override
+	public void resetLayer() {
+		if(client.isTerminated() && server.isTerminated() && (currentTransaction == Transaction.INVITE_TRANSACTION)) {
+			currentTransaction = Transaction.NO_TRANSACTION;
+			callId = null;
+			destination = null;
 		}
 	}
-	
 	
 
 	@Override
@@ -135,20 +51,14 @@ public class TransactionLayerProxy extends TransactionLayer{
 		
 			case INVITE_TRANSACTION:
 				
-				if(!message.getCallId().equals(currentCallId)) {
+				if(!message.getCallId().equals(callId)) {
 					ServiceUnavailableMessage serviceUnavailable = (ServiceUnavailableMessage) SIPMessage.createResponse(
 							SIPMessage._503_SERVICE_UNABAILABLE, message);
 					sendResponse(serviceUnavailable);
 				}else if(message instanceof ACKMessage) {
-					server = server.processMessage(message, this);
+					server.processMessage(message);
 				}else{
-					client = client.processMessage(message, this);
-				}
-				
-				if((server == ServerStateProxy.TERMINATED) && (client == ClientStateProxy.TERMINATED)){
-					currentTransaction = Transaction.NO_TRANSACTION;
-					currentCallId = null;
-					destination = null;
+					client.processMessage(message);
 				}
 				
 				break;
@@ -157,9 +67,9 @@ public class TransactionLayerProxy extends TransactionLayer{
 				
 				if(message instanceof InviteMessage) {
 					currentTransaction = Transaction.INVITE_TRANSACTION;
-					currentCallId = message.getCallId();
+					callId = message.getCallId();
 					destination = ((InviteMessage)message).getDestination();
-					server = server.processMessage(message, this);
+					server.processMessage(message);
 				}else{
 					ul.recvFromTransaction(message);
 				}
@@ -173,15 +83,13 @@ public class TransactionLayerProxy extends TransactionLayer{
 		
 	}
 	
-	public void recvRequestFromUser(SIPMessage request, InetAddress requestAddress, int requestPort) {
-		
-		this.requestAddress = requestAddress;
-		this.requestPort = requestPort;
+	@Override
+	public void recvRequestFromUser(SIPMessage request) {
 		
 		switch (currentTransaction) {
 		
 			case INVITE_TRANSACTION:
-				client = client.processMessage(request, this);
+				client.processMessage(request);
 				break;
 				
 			case NO_TRANSACTION:
@@ -191,24 +99,8 @@ public class TransactionLayerProxy extends TransactionLayer{
 			default:
 				break;
 		}
+		
 	}
-	
-	public void recvResponseFromUser(SIPMessage response) {
-		
-		switch (currentTransaction) {
-		
-			case INVITE_TRANSACTION:
-				server = server.processMessage(response, this);
-				break;
-				
-			case NO_TRANSACTION:
-				sendResponse(response);
-				break;
-				
-			default:
-				break;
-		}
-	}
-		
 
+	
 }
